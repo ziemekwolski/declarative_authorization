@@ -1,43 +1,18 @@
-require 'test/unit'
-require 'pathname'
+# Configure Rails Environment
+ENV["RAILS_ENV"] = "test"
 
-unless defined?(RAILS_ROOT)
-  RAILS_ROOT = ENV['RAILS_ROOT'] ?
-      ENV['RAILS_ROOT'] + "" :
-      File.join(File.dirname(__FILE__), %w{.. .. .. ..})
-end
+require File.expand_path("../dummy/config/environment.rb",  __FILE__)
+require "rails/test_help"
 
-unless defined?(ActiveRecord)
-  if File.directory? RAILS_ROOT + '/config'
-    puts 'Using config/boot.rb'
-    ENV['RAILS_ENV'] = 'test'
-    require File.join(RAILS_ROOT, 'config', 'environment.rb')
-  else
-    # simply use installed gems if available
-    version_requirement = ENV['RAILS_VERSION'] ? "= #{ENV['RAILS_VERSION']}" : "> 2.1.0"
-    puts "Using Rails from RubyGems (#{version_requirement || "default"})"
-    require 'rubygems'
-    %w{actionpack activerecord activesupport rails}.each do |gem_name|
-      gem gem_name, version_requirement
-    end
-  end
+Rails.backtrace_cleaner.remove_silencers!
 
-  unless defined?(Rails)  # needs to be explicit in Rails < 3
-    %w(action_pack action_controller active_record active_support initializer).each {|f| require f}
-  end
-end
-
-DA_ROOT = Pathname.new(File.expand_path("..", File.dirname(__FILE__)))
-
-require DA_ROOT + File.join(%w{lib declarative_authorization rails_legacy})
-require DA_ROOT + File.join(%w{lib declarative_authorization authorization})
-require DA_ROOT + File.join(%w{lib declarative_authorization in_controller})
-require DA_ROOT + File.join(%w{lib declarative_authorization maintenance})
-
-begin
-  require 'ruby-debug'
-rescue MissingSourceFile; end
-
+# Load support files
+Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
+DA_ROOT = File.join(File.dirname(__FILE__), %w{.. lib})
+require File.join(File.dirname(__FILE__), %w{.. lib declarative_authorization rails_legacy})
+require File.join(File.dirname(__FILE__), %w{.. lib declarative_authorization authorization})
+require File.join(File.dirname(__FILE__), %w{.. lib declarative_authorization in_controller})
+require File.join(File.dirname(__FILE__), %w{.. lib declarative_authorization maintenance})
 
 class MockDataObject
   def initialize (attrs = {})
@@ -118,12 +93,7 @@ if Rails.version < "3"
     map.connect ':controller/:action/:id'
   end
 else
-  #Rails::Application.routes.draw do
-  Rails.application.routes.draw do
-    match '/name/spaced_things(/:action)' => 'name/spaced_things'
-    match '/deep/name_spaced/things(/:action)' => 'deep/name_spaced/things'
-    match '/:controller(/:action(/:id))'
-  end
+  #Routes defined in dummy framework
 end
 
 ActionController::Base.send :include, Authorization::AuthorizationInController

@@ -62,7 +62,7 @@ module Authorization
         end
         controllers = []
         ObjectSpace.each_object(Class) do |obj|
-          controllers << obj if obj.ancestors.include?(ActionController::Base) and obj != ActionController::Base and obj.name.demodulize != 'ApplicationController'
+          controllers << obj if obj.ancestors.include?(ActionController::Base) and obj != ActionController::Base and obj.name and obj.name.demodulize != 'ApplicationController'
         end
 
         controllers.inject({}) do |memo, controller|

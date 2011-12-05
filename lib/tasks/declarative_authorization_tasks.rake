@@ -1,9 +1,8 @@
 namespace :auth do
   desc "Lists all privileges used in controllers, views, models"
-  task :used_privileges do
-    # TODO note where privileges are used
-    require File.join(RAILS_ROOT, 'config', 'boot.rb')
-    require File.join(RAILS_ROOT, 'config', 'environment.rb')
+  task :used_privileges => :environment do
+    # TODO rewrite to recurse directories, i.e. support name_spaces
+    RAILS_ROOT = Rails.root unless defined? RAILS_ROOT
     controllers = [ApplicationController]
     Dir.new("#{RAILS_ROOT}/app/controllers").entries.each do |controller_file|
       if controller_file =~ /_controller/ 
