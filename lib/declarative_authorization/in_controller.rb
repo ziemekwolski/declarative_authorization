@@ -1,7 +1,17 @@
 # Authorization::AuthorizationInController
 require File.dirname(__FILE__) + '/authorization.rb'
 
+
 module Authorization
+  module InstanceVariableConvention
+    private
+    def decl_instance_var(ref, inflection = :singularize)
+      raise ArgumentError, "Invalid inflection parameter" unless [:singularize, :pluralize].include?(inflection)
+      ref.to_s.underscore.send(inflection).gsub('/','_').to_sym
+    end
+  end
+
+
   module AuthorizationInController
   
     def self.included(base) # :nodoc:
@@ -10,6 +20,8 @@ module Authorization
         :permitted_to!
     end
     
+    include Authorization::InstanceVariableConvention
+
     DEFAULT_DENY = false
     
     # If attribute_check is set for filter_access_to, decl_auth_context will try to
@@ -39,7 +51,7 @@ module Authorization
     # 
     # See examples for Authorization::AuthorizationHelper #permitted_to?
     #
-    # If no object or context is specified, the controller_name is used as
+    # If no object or context is specified, the controller_path is used as
     # context.
     #
     def permitted_to? (privilege, object_or_sym = nil, options = {})
@@ -123,7 +135,7 @@ module Authorization
       unless allowed
         if all_permissions.empty? and matching_permissions.empty?
           logger.warn "Permission denied: No matching filter access " +
-            "rule found for #{self.class.controller_name}.#{action_name}"
+            "rule found for #{self.class.controller_path}.#{action_name}"
         elsif auth_exception
           logger.info "Permission denied: #{auth_exception}"
         end
@@ -138,31 +150,31 @@ module Authorization
     end
 
     def load_controller_object (context_without_namespace = nil) # :nodoc:
-      instance_var = :"@#{context_without_namespace.to_s.singularize}"
+      instance_var = :"@#{decl_instance_var(context_without_namespace)}"
       model = context_without_namespace.to_s.classify.constantize
       instance_variable_set(instance_var, model.find(params[:id]))
     end
 
     def load_parent_controller_object (parent_context_without_namespace) # :nodoc:
-      instance_var = :"@#{parent_context_without_namespace.to_s.singularize}"
+      instance_var = :"@#{decl_instance_var(parent_context_without_namespace)}"
       model = parent_context_without_namespace.to_s.classify.constantize
-      instance_variable_set(instance_var, model.find(params[:"#{parent_context_without_namespace.to_s.singularize}_id"]))
+      instance_variable_set(instance_var, model.find(params[:"#{decl_instance_var(parent_context_without_namespace)}_id"]))
     end
 
     def new_controller_object_from_params (context_without_namespace, parent_context_without_namespace) # :nodoc:
       model_or_proxy = parent_context_without_namespace ?
-           instance_variable_get(:"@#{parent_context_without_namespace.to_s.singularize}").send(context_without_namespace.to_sym) :
+           instance_variable_get(:"@#{decl_instance_var(parent_context_without_namespace)}").send(context_without_namespace.gsub(/.*\//,'').pluralize.to_sym) :
            context_without_namespace.to_s.classify.constantize
-      instance_var = :"@#{context_without_namespace.to_s.singularize}"
+      instance_var = :"@#{decl_instance_var(context_without_namespace)}"
       instance_variable_set(instance_var,
-          model_or_proxy.new(params[context_without_namespace.to_s.singularize]))
+          model_or_proxy.new(params[decl_instance_var(context_without_namespace)]))
     end
 
     def new_controller_object_for_collection (context_without_namespace, parent_context_without_namespace) # :nodoc:
       model_or_proxy = parent_context_without_namespace ?
-           instance_variable_get(:"@#{parent_context_without_namespace.to_s.singularize}").send(context_without_namespace.to_sym) :
+           instance_variable_get(:"@#{decl_instance_var(parent_context_without_namespace)}").send(context_without_namespace.gsub(/.*\//,'').pluralize.to_sym) :
            context_without_namespace.to_s.classify.constantize
-      instance_var = :"@#{context_without_namespace.to_s.singularize}"
+      instance_var = :"@#{decl_instance_var(context_without_namespace)}"
       instance_variable_set(instance_var, model_or_proxy.new)
     end
 
@@ -258,7 +270,7 @@ module Authorization
       #   Privilege required; defaults to action_name
       # [:+context+] 
       #   The privilege's context, defaults to decl_auth_context, which consists
-      #   of controller_name, prepended by any namespaces
+      #   of controller_path, prepended by any namespaces
       # [:+attribute_check+]
       #   Enables the check of attributes defined in the authorization rules.
       #   Defaults to false.  If enabled, filter_access_to will use a context
@@ -399,8 +411,8 @@ module Authorization
       # All options:
       # [:+member+]
       #   Member methods are actions like +show+, which have an params[:id] from
-      #   which to load the controller object and assign it to @controller_name,
-      #   e.g. @+branch+.
+      #   which to load the controller object and assign it to the expected
+      #   instance_variable, e.g. @+branch+.
       #
       #   By default, member actions are [:+show+, :+edit+, :+update+,
       #   :+destroy+].  Also, any action not belonging to the seven CRUD actions
@@ -428,10 +440,10 @@ module Authorization
       # [:+new+]
       #   +new+ methods are actions such as +new+ and +create+, which don't
       #   receive a params[:id] to load an object from, but
-      #   a params[:controller_name_singular] hash with attributes for a new
+      #   a params[:controller_path_singular] hash with attributes for a new
       #   object.  The attributes will be used here to create a new object and
       #   check the object against the authorization rules.  The object is
-      #   assigned to @controller_name_singular, e.g. @branch.
+      #   assigned to @controller_path_singular, e.g. @branch.
       #
       #   If +nested_in+ is given, the new object
       #   is created from the parent_object.controller_name
@@ -496,35 +508,35 @@ module Authorization
             end
           end
 
-          new_for_collection_method = :"new_#{controller_name.singularize}_for_collection"
+          new_for_collection_method = :"new_#{decl_instance_var}_for_collection"
           before_filter :only => collections.keys do |controller|
             # new_for_collection
             if controller.respond_to?(new_for_collection_method)
               controller.send(new_for_collection_method)
             else
               controller.send(:new_controller_object_for_collection,
-                  options[:context] || controller_name, options[:nested_in])
+                  options[:context] || controller_path, options[:nested_in])
             end
           end
         end
 
-        new_from_params_method = :"new_#{controller_name.singularize}_from_params"
+        new_from_params_method = :"new_#{decl_instance_var}_from_params"
         before_filter :only => new_actions.keys do |controller|
           # new_from_params
           if controller.respond_to?(new_from_params_method)
             controller.send(new_from_params_method)
           else
             controller.send(:new_controller_object_from_params,
-                options[:context] || controller_name, options[:nested_in])
+                options[:context] || controller_path, options[:nested_in])
           end
         end
-        load_method = :"load_#{controller_name.singularize}"
+        load_method = :"load_#{decl_instance_var}"
         before_filter :only => members.keys do |controller|
           # load controller object
           if controller.respond_to?(load_method)
             controller.send(load_method)
           else
-            controller.send(:load_controller_object, options[:context] || controller_name)
+            controller.send(:load_controller_object, options[:context] || controller_path)
           end
         end
         filter_access_to :all, :attribute_check => true, :context => options[:context]
@@ -550,8 +562,7 @@ module Authorization
       #   AnyName::Space::ThingsController => :any_name_space_things
       #
       def decl_auth_context
-        prefixes = name.split('::')[0..-2].map(&:underscore)
-        ((prefixes + [controller_name]) * '_').to_sym
+        controller_path.underscore.gsub('/','_').to_sym
       end
       
       protected
@@ -588,10 +599,18 @@ module Authorization
           end
         end
       end
+
+      # => a instance variable name which handles name spaces
+      def decl_instance_var(ref = controller_path, inflection = :singularize)
+        raise ArgumentError, "Invalid inflection parameter" unless [:singularize, :pluralize].include?(inflection)
+        ref.to_s.underscore.send(inflection).gsub('/','_').to_sym
+      end
     end
   end
   
   class ControllerPermission # :nodoc:
+    include Authorization::InstanceVariableConvention
+
     attr_reader :actions, :privilege, :context, :attribute_check
     def initialize (actions, privilege, context, attribute_check = false, 
                     load_object_model = nil, load_object_method = nil,
@@ -636,8 +655,8 @@ module Authorization
         contr.instance_eval(&@load_object_method)
       else
         load_object_model = @load_object_model ||
-            (@context ? @context.to_s.classify.constantize : contr.class.controller_name.classify.constantize)
-        instance_var = :"@#{load_object_model.name.underscore}"
+            (@context ? @context.to_s.classify.constantize : contr.class.controller_path.classify.constantize)
+        instance_var = :"@#{decl_instance_var(load_object_model)}"
         object = contr.instance_variable_get(instance_var)
         unless object
           begin

@@ -293,6 +293,9 @@ class CustomMembersCollectionsResourceController < MocksController
   def self.controller_name
     "basic_resources"
   end
+  def self.controller_path
+    controller_name
+  end
   filter_resource_access :member => [[:other_show, :read]],
       :collection => {:search => :read}, :new => [:other_new]
   define_action_methods :other_new, :search, :other_show
@@ -360,6 +363,9 @@ end
 class AdditionalMembersCollectionsResourceController < MocksController
   def self.controller_name
     "basic_resources"
+  end
+  def self.controller_path
+    controller_name
   end
   filter_resource_access :additional_member => :other_show,
       :additional_collection => [:search], :additional_new => {:other_new => :new}
@@ -506,6 +512,51 @@ class ExplicitContextResourceControllerTest < ActionController::TestCase
     assert !@controller.authorized?
     request!(allowed_user, :new, reader, :basic_resource => {:id => "1"},
         :clear => [:@basic_resource])
+    assert @controller.authorized?
+  end
+end
+
+
+
+class Fruit::Apple < MockDataObject
+  def self.name
+    'Fruit::Apple'
+  end
+  def name
+    "Malus Domestica"
+  end
+end
+class Fruit::ApplesController < MocksController
+  filter_resource_access
+  define_resource_actions
+end
+class Fruit::ApplesControllerTest < ActionController::TestCase
+  setup do
+    @reader = Authorization::Reader::DSLReader.new
+    @reader.parse %{
+      authorization do
+        role :allowed_role do
+          has_permission_on :fruit_apples, :to => [:index, :show, :new]
+        end
+      end
+    }
+    @allowed_user = MockUser.new(:allowed_role)
+  end
+
+  test 'should load instance for namespaced attribute on show' do
+    request!(@allowed_user, :show, @reader, :id => "1")
+    assert_equal Fruit::Apple, @controller.instance_variable_get(:@fruit_apple).class
+    assert @controller.authorized?
+  end
+  test 'should load instances for namespaced attribute on index' do
+    request!(@allowed_user, :index, @reader)
+#    assert_equal Fruit::Apple, @controller.instance_variable_get(:@fruit_apples).first.class
+    assert @controller.authorized?
+  end
+  test 'should load empty, but new object for namespaced attribute on new' do
+    request!(@allowed_user, :new, @reader, :fruit_apple => {:name => 'Gravenstein'})
+    object = @controller.instance_variable_get(:@fruit_apple)
+    assert_equal Fruit::Apple, object.class
     assert @controller.authorized?
   end
 end
