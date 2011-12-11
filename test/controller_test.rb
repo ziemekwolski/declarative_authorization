@@ -1,11 +1,6 @@
 require File.join(File.dirname(__FILE__), 'test_helper.rb')
 
 
-class LoadMockObject < MockDataObject
-  def self.name
-    "LoadMockObject"
-  end
-end
 
 ##################
 class SpecificMocksController < MocksController
@@ -409,13 +404,6 @@ class HierachicalControllerTest < ActionController::TestCase
 end
 
 ##################
-module Name
-  class SpacedThingsController < MocksController
-    filter_access_to :show
-    filter_access_to :update, :context => :spaced_things
-    define_action_methods :show, :update
-  end
-end
 class NameSpacedControllerTest < ActionController::TestCase
   tests Name::SpacedThingsController
   def test_context
@@ -443,15 +431,6 @@ class NameSpacedControllerTest < ActionController::TestCase
   end
 end
 
-module Deep
-  module NameSpaced
-    class ThingsController < MocksController
-      filter_access_to :show
-      filter_access_to :update, :context => :things
-      define_action_methods :show, :update
-    end
-  end
-end
 class DeepNameSpacedControllerTest < ActionController::TestCase
   tests Deep::NameSpaced::ThingsController
   def test_context

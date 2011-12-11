@@ -516,7 +516,8 @@ class ExplicitContextResourceControllerTest < ActionController::TestCase
   end
 end
 
-
+class Fruit
+end
 
 class Fruit::Apple < MockDataObject
   def self.name
