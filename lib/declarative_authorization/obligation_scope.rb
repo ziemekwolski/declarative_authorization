@@ -48,7 +48,7 @@ module Authorization
       if Rails.version < "3"
         super(model, options)
       else
-	super(model, model.table_name)
+        super(model, model.table_name)
       end
     end
 
