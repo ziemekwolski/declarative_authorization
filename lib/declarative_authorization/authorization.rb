@@ -140,7 +140,8 @@ module Authorization
         :object => nil,
         :skip_attribute_test => false,
         :context => nil,
-        :bang => true
+        :bang => true,
+        :skip_column_check => true # set to true to avoid taxing the system.
       }.merge(options)
       
       # Make sure we're handling all privileges as symbols.
@@ -179,7 +180,7 @@ module Authorization
       # it checks whether the attribute condition is met. If no attribute is specified, it
       # returns true.
       rules.each do |rule|
-        return true if rule.validate?(attr_validator, options[:skip_attribute_test])
+        return true if rule.satisfies_attribute_conditions_and_columns_permissions(attr_validator, options)
       end
 
       if options[:bang]
@@ -194,7 +195,7 @@ module Authorization
         false
       end
     end
-    
+        
     # Calls permit! but doesn't raise authorization errors. If no exception is
     # raised, permit? returns true and yields  to the optional block.
     def permit? (privilege, options = {}) # :yields:
@@ -434,7 +435,23 @@ module Authorization
       @contexts.include?(context) and roles.include?(@role) and 
         not (@privileges & privs).empty?
     end
-
+    
+    # true / false - checks whether all the columns passed in are accessible.
+    # checking columns is taxing on the system, so it is set to skip by default.
+    def has_permissions_to_columns(columns, options)
+      options = { :skip_column_check => true }.merge(options)
+      options[:skip_column_check] || ((@accessible_columns & columns) == columns)
+    end
+    
+    # both of these methods have a bypass - which means that if skip_attribute_test or skip_column_check is set
+    # attribute_check (aka validate?) and has_permissions_to_columns will return true respectively even if 
+    # the conditions are not met.
+    def satisfies_attribute_conditions_and_columns_permissions(attr_validator, options)
+      validate?(attr_validator, options[:skip_attribute_test]) && 
+        has_permissions_to_columns(options[:columns], {:skip_column_check => options[:skip_column_check]})
+    end
+    
+    
     def validate? (attr_validator, skip_attribute = false)
       skip_attribute or @attributes.empty? or
         @attributes.send(@join_operator == :and ? :all? : :any?) do |attr|

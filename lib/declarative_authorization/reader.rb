@@ -343,7 +343,7 @@ module Authorization
       end
       
       # Allows the programmer to define which columns the user has access to
-      def on_columns (*columns)
+      def on_columns (columns)
         raise DSLError, "to only allowed in has_permission_on blocks" if @current_rule.nil?
         @current_rule.append_columns(columns)
       end
