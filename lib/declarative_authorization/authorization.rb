@@ -141,7 +141,7 @@ module Authorization
         :skip_attribute_test => false,
         :context => nil,
         :bang => true,
-        :skip_column_check => true # set to true to avoid taxing the system.
+        :column_check => false # set to false to avoid taxing the system.
       }.merge(options)
       
       # Make sure we're handling all privileges as symbols.
@@ -439,19 +439,19 @@ module Authorization
     # true / false - checks whether all the columns passed in are accessible.
     # checking columns is taxing on the system, so it is set to skip by default.
     def has_permissions_to_columns(columns, options)
-      options = { :skip_column_check => true }.merge(options)
-      return true if options[:skip_column_check] 
-      raise "columns that you are checking against is nil, which is likely causing a false positive" if columns.nil? && !options[:skip_column_check]
+      options = { :column_check => false }.merge(options)
+      return true if !options[:column_check] 
+      raise "columns that you are checking against is nil, which is likely causing a false positive" if columns.nil? && options[:column_check]
       columns.map!{|column| column.to_sym}
       ((@accessible_columns & columns).sort == columns.sort)
     end
     
-    # both of these methods have a bypass - which means that if skip_attribute_test or skip_column_check is set
+    # both of these methods have a bypass - which means that if skip_attribute_test or column_check is set
     # attribute_check (aka validate?) and has_permissions_to_columns will return true respectively even if 
     # the conditions are not met.
     def satisfies_attribute_conditions_and_columns_permissions(attr_validator, options)
       validate?(attr_validator, options[:skip_attribute_test]) && 
-        has_permissions_to_columns(options[:columns], {:skip_column_check => options[:skip_column_check]})
+        has_permissions_to_columns(options[:columns], {:column_check => options[:column_check]})
     end
     
     

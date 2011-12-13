@@ -14,5 +14,5 @@ class TestColumn < ActiveRecord::Base
     super(*args)
   end
   
-  using_access_control({:skip_column_check => false})
+  using_access_control({:column_check => true})
 end

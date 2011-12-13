@@ -50,22 +50,22 @@ class AuthorizationRuleTest < Test::Unit::TestCase
   
   def test_should_check_if_the_columns_passed_in_match_accessible_ones
     rule = Authorization::AuthorizationRule.new("current_role", [:read], :perms, :or, {:on_columns => [:id, :title, :text]})
-    assert_equal true, rule.has_permissions_to_columns([:id, :title, :text], {:skip_column_check => false}), "Should have access to these columns"
-    assert_equal false, rule.has_permissions_to_columns([:id, :title, :text, :admin_access], {:skip_column_check => false}), "Should have NOT access to all these columns"
-    assert_equal true, rule.has_permissions_to_columns([:id, :title], {:skip_column_check => false}), "Should have access to these columns"
-    assert_equal true, rule.has_permissions_to_columns([:id], {:skip_column_check => false}), "Should have access to these columns"
-    assert_equal true, rule.has_permissions_to_columns([:title, :text, :id], {:skip_column_check => false}), "Should have access to these columns"
-    assert_equal true, rule.has_permissions_to_columns([:text, :title, :id], {:skip_column_check => false}), "Should have access to these columns"
-    assert_equal false, rule.has_permissions_to_columns([:text, :title, :id, :admin_access], {:skip_column_check => false}), "Should NOT have access to these columns"
-    assert_equal true, rule.has_permissions_to_columns(["text", "title", "id"], {:skip_column_check => false}), "Should have access to these columns"
+    assert_equal true, rule.has_permissions_to_columns([:id, :title, :text], {:column_check => true}), "Should have access to these columns"
+    assert_equal false, rule.has_permissions_to_columns([:id, :title, :text, :admin_access], {:column_check => true}), "Should have NOT access to all these columns"
+    assert_equal true, rule.has_permissions_to_columns([:id, :title], {:column_check => true}), "Should have access to these columns"
+    assert_equal true, rule.has_permissions_to_columns([:id], {:column_check => true}), "Should have access to these columns"
+    assert_equal true, rule.has_permissions_to_columns([:title, :text, :id], {:column_check => true}), "Should have access to these columns"
+    assert_equal true, rule.has_permissions_to_columns([:text, :title, :id], {:column_check => true}), "Should have access to these columns"
+    assert_equal false, rule.has_permissions_to_columns([:text, :title, :id, :admin_access], {:column_check => true}), "Should NOT have access to these columns"
+    assert_equal true, rule.has_permissions_to_columns(["text", "title", "id"], {:column_check => true}), "Should have access to these columns"
     rule = Authorization::AuthorizationRule.new("current_role", [:read], :perms, :or, {:on_columns => ["id", "title", "text"]})
-    assert_equal true, rule.has_permissions_to_columns([:text, :title, :id], {:skip_column_check => false}), "Should have access to these columns"
+    assert_equal true, rule.has_permissions_to_columns([:text, :title, :id], {:column_check => true}), "Should have access to these columns"
   end
   
   
   def test_should_return_true_if_permission_by_pass_is_set
     rule = Authorization::AuthorizationRule.new("current_role", [:read], :perms, :or, {:on_columns => [:id, :title, :text]})
-    assert_equal true, rule.has_permissions_to_columns([:id, :title, :text, :admin_access], {:skip_column_check => true}), "should return true because bypass is set"
+    assert_equal true, rule.has_permissions_to_columns([:id, :title, :text, :admin_access], {:column_check => false}), "should return true because bypass is set"
   end
   
   def test_should_return_true_if_both_bypasses_are_set_for_satisfies_attribute_conditions_and_columns_permissions
@@ -80,7 +80,7 @@ class AuthorizationRuleTest < Test::Unit::TestCase
     engine = Authorization::Engine.new(reader)
     attr_validator = Authorization::Engine::AttributeValidator.new(engine, "user", Object, [:create, :read, :update, :delete], :context)
     #skip both validations
-    options = {:skip_attribute_test => true, :skip_column_check => true}
+    options = {:skip_attribute_test => true, :column_check => false}
     assert_equal true, reader.auth_rules_reader.auth_rules.first.satisfies_attribute_conditions_and_columns_permissions(attr_validator, options), 
       "should always return true because of bypass settings"
   end
@@ -101,7 +101,7 @@ class AuthorizationRuleTest < Test::Unit::TestCase
     engine = Authorization::Engine.new(reader)
     attr_validator = Authorization::Engine::AttributeValidator.new(engine, "user", mock_object, [:create, :read, :update, :delete], :context)
     #column_check is skipped, but attribute check fails because of LoadMockObject1 should be LoadMockObject
-    options = {:skip_column_check => true}
+    options = {:column_check => false}
     assert_equal false, reader.auth_rules_reader.auth_rules.first.satisfies_attribute_conditions_and_columns_permissions(attr_validator, options), 
       "attribute check is being performed, which should fail so the method should fail"
   end
@@ -123,7 +123,7 @@ class AuthorizationRuleTest < Test::Unit::TestCase
     engine = Authorization::Engine.new(reader)
     attr_validator = Authorization::Engine::AttributeValidator.new(engine, "user", mock_object, [:create, :read, :update, :delete], :context)
     #name column is being modified without permission
-    options = {:columns => [:name]}
+    options = {:columns => [:name], :column_check => true}
     assert_equal false, reader.auth_rules_reader.auth_rules.first.satisfies_attribute_conditions_and_columns_permissions(attr_validator, options), 
       "column check is being performed, which should fail so the method should fail"
   end

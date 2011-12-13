@@ -151,14 +151,14 @@ module Authorization
           options = {
             :context => nil,
             :include_read => false,
-            :skip_column_check => true
+            :column_check => false
           }.merge(options)
 
           class_eval do
             [:create, :update, [:destroy, :delete]].each do |action, privilege|
               send(:"before_#{action}") do |object|
                 Authorization::Engine.instance.permit!(privilege || action,
-                  :object => object, :context => options[:context], :skip_column_check => options[:skip_column_check], :columns => self.changes.keys)
+                  :object => object, :context => options[:context], :column_check => options[:column_check], :columns => self.changes.keys)
               end
             end
             
