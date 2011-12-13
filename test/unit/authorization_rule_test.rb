@@ -8,6 +8,12 @@ class AuthorizationRuleTest < Test::Unit::TestCase
     assert_equal rule.accessible_columns, []
   end
   
+  def test_should_convert_string_columns_to_symbols
+    rule = Authorization::AuthorizationRule.new("current_role")
+    rule.append_columns(["column_one", "column_two"])
+    assert_equal rule.accessible_columns, [:column_one, :column_two]
+  end
+  
   def test_should_append_column_into_accessible_columns
     rule = Authorization::AuthorizationRule.new("current_role")
     rule.append_columns(:column_one)
@@ -18,6 +24,11 @@ class AuthorizationRuleTest < Test::Unit::TestCase
     rule = Authorization::AuthorizationRule.new("current_role")
     rule.append_columns([:column_one, :column_two])
     assert_equal rule.accessible_columns, [:column_one, :column_two]
+  end
+  
+  def test_initializer_should_convert_string_columns_to_symbols
+    rule = Authorization::AuthorizationRule.new("current_role", [:read], :perms, :or, {:on_columns => "name"})
+    assert_equal [:name], rule.accessible_columns
   end
   
   def test_should_append_to_existing_accessiable_columns

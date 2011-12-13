@@ -405,7 +405,7 @@ module Authorization
       @contexts = Set.new((contexts && !contexts.is_a?(Array) ? [contexts] : contexts))
       @join_operator = join_operator
       @attributes = []
-      @accessible_columns = Array.wrap(options[:on_columns])
+      @accessible_columns = Array.wrap(options[:on_columns]).map! {|column| column.to_sym}
       @source_file = options[:source_file]
       @source_line = options[:source_line]
     end
@@ -425,7 +425,7 @@ module Authorization
     end
     
     def append_columns (columns)
-      @accessible_columns += Array.wrap(columns)
+      @accessible_columns += Array.wrap(columns).map! {|column| column.to_sym}
     end
     
     # Checks whether passed in roles, privliages, and context matches
