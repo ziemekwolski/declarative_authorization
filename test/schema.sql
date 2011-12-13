@@ -20,6 +20,21 @@ CREATE TABLE 'test_attrs' (
   'attr' integer default 1
 );
 
+CREATE TABLE 'test_columns' (
+  'id' INTEGER PRIMARY KEY NOT NULL, 
+  'test_model_id' integer,
+  'test_another_model_id' integer,
+  'test_a_third_model_id' integer,
+  'branch_id' integer,
+  'company_id' integer,
+  'test_attr_through_id' INTEGER,
+  'n_way_join_item_id' INTEGER,
+  'test_model_security_model_id' integer,
+  'attr' integer,
+  'content' text
+);
+
+
 CREATE TABLE 'test_attr_throughs' (
   'id' INTEGER PRIMARY KEY NOT NULL, 
   'test_attr_id' integer

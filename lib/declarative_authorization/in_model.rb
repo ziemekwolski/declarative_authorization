@@ -125,7 +125,7 @@ module Authorization
                 :context => context, :engine => engine, :model => parent_scope.klass)
           end
         end
-        
+                
         # Activates model security for the current model.  Then, CRUD operations
         # are checked against the authorization of the current user.  The
         # privileges are :+create+, :+read+, :+update+ and :+delete+ in the
@@ -150,14 +150,15 @@ module Authorization
         def self.using_access_control (options = {})
           options = {
             :context => nil,
-            :include_read => false
+            :include_read => false,
+            :skip_column_check => true
           }.merge(options)
 
           class_eval do
             [:create, :update, [:destroy, :delete]].each do |action, privilege|
               send(:"before_#{action}") do |object|
                 Authorization::Engine.instance.permit!(privilege || action,
-                  :object => object, :context => options[:context])
+                  :object => object, :context => options[:context], :skip_column_check => options[:skip_column_check], :columns => self.changes.keys)
               end
             end
             

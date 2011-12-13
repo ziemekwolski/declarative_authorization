@@ -373,6 +373,36 @@ class ModelTest < Test::Unit::TestCase
     TestAttr.delete_all
     TestAttrThrough.delete_all
   end
+  
+  def test_should_restrict_access_users_who_dont_have_sufficient_column_access
+    reader = Authorization::Reader::DSLReader.new
+    reader.parse %{
+      authorization do
+        role :test_role do
+          has_permission_on :test_columns, :to => [:create, :read, :update, :delete] do
+            on_columns ['id', 'test_model_id', 'test_another_model_id', 'test_a_third_model_id', 'branch_id', 'company_id', 'content']
+          end
+        end
+      end
+    }
+    engine = Authorization::Engine.instance(reader)
+    Authorization.current_user = MockUser.new(:test_role)
+    test_column_1 = nil
+    assert_nothing_raised do
+      test_column_1 = TestColumn.create! :content => 'test_1'
+    end
+    
+    # user was trying to change the attr column and an exception was thrown.
+    assert_raise Authorization::AttributeAuthorizationError do
+      test_column_2 = TestColumn.create! :content => 'test_1', :attr => "2"
+    end
+    
+    # ensure that the nothing breaks if the developer does something un-expected.
+    assert_nothing_raised do
+      test_column_1.save
+    end
+  end
+  
 
   def test_model_permitted_to
     reader = Authorization::Reader::DSLReader.new

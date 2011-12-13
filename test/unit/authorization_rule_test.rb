@@ -52,7 +52,16 @@ class AuthorizationRuleTest < Test::Unit::TestCase
     rule = Authorization::AuthorizationRule.new("current_role", [:read], :perms, :or, {:on_columns => [:id, :title, :text]})
     assert_equal true, rule.has_permissions_to_columns([:id, :title, :text], {:skip_column_check => false}), "Should have access to these columns"
     assert_equal false, rule.has_permissions_to_columns([:id, :title, :text, :admin_access], {:skip_column_check => false}), "Should have NOT access to all these columns"
+    assert_equal true, rule.has_permissions_to_columns([:id, :title], {:skip_column_check => false}), "Should have access to these columns"
+    assert_equal true, rule.has_permissions_to_columns([:id], {:skip_column_check => false}), "Should have access to these columns"
+    assert_equal true, rule.has_permissions_to_columns([:title, :text, :id], {:skip_column_check => false}), "Should have access to these columns"
+    assert_equal true, rule.has_permissions_to_columns([:text, :title, :id], {:skip_column_check => false}), "Should have access to these columns"
+    assert_equal false, rule.has_permissions_to_columns([:text, :title, :id, :admin_access], {:skip_column_check => false}), "Should NOT have access to these columns"
+    assert_equal true, rule.has_permissions_to_columns(["text", "title", "id"], {:skip_column_check => false}), "Should have access to these columns"
+    rule = Authorization::AuthorizationRule.new("current_role", [:read], :perms, :or, {:on_columns => ["id", "title", "text"]})
+    assert_equal true, rule.has_permissions_to_columns([:text, :title, :id], {:skip_column_check => false}), "Should have access to these columns"
   end
+  
   
   def test_should_return_true_if_permission_by_pass_is_set
     rule = Authorization::AuthorizationRule.new("current_role", [:read], :perms, :or, {:on_columns => [:id, :title, :text]})

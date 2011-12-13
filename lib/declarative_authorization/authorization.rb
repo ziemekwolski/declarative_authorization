@@ -435,12 +435,15 @@ module Authorization
       @contexts.include?(context) and roles.include?(@role) and 
         not (@privileges & privs).empty?
     end
-    
+        
     # true / false - checks whether all the columns passed in are accessible.
     # checking columns is taxing on the system, so it is set to skip by default.
     def has_permissions_to_columns(columns, options)
       options = { :skip_column_check => true }.merge(options)
-      options[:skip_column_check] || ((@accessible_columns & columns) == columns)
+      return true if options[:skip_column_check] 
+      raise "columns that you are checking against is nil, which is likely causing a false positive" if columns.nil? && !options[:skip_column_check]
+      columns.map!{|column| column.to_sym}
+      ((@accessible_columns & columns).sort == columns.sort)
     end
     
     # both of these methods have a bypass - which means that if skip_attribute_test or skip_column_check is set
