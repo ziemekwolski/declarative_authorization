@@ -175,6 +175,9 @@ module Authorization
       rules = matching_auth_rules(roles, privileges, options[:context])
       
       # Test each rule in turn to see whether any one of them is satisfied.
+      # Specificially this is the attribute test, ie "if_attribute :branch => is {user.branch}"
+      # it checks whether the attribute condition is met. If no attribute is specified, it
+      # returns true.
       rules.each do |rule|
         return true if rule.validate?(attr_validator, options[:skip_attribute_test])
       end
@@ -392,7 +395,7 @@ module Authorization
   end
   class AuthorizationRule
     attr_reader :attributes, :contexts, :role, :privileges, :join_operator,
-        :source_file, :source_line
+        :source_file, :source_line, :accessible_columns
     
     def initialize (role, privileges = [], contexts = nil, join_operator = :or,
           options = {})
@@ -401,6 +404,7 @@ module Authorization
       @contexts = Set.new((contexts && !contexts.is_a?(Array) ? [contexts] : contexts))
       @join_operator = join_operator
       @attributes = []
+      @accessible_columns = Array.wrap(options[:on_columns])
       @source_file = options[:source_file]
       @source_line = options[:source_line]
     end
@@ -419,7 +423,13 @@ module Authorization
       @attributes << attribute
     end
     
-    def matches? (roles, privs, context = nil)
+    def append_columns (columns)
+      @accessible_columns += Array.wrap(columns)
+    end
+    
+    # Checks whether passed in roles, privliages, and context matches
+    # the defined one in the DSL definitions.
+    def matches? (roles, privs, context = nil, columns = nil)
       roles = [roles] unless roles.is_a?(Array)
       @contexts.include?(context) and roles.include?(@role) and 
         not (@privileges & privs).empty?

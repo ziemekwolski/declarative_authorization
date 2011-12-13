@@ -284,10 +284,12 @@ module Authorization
         privs = options[:to] 
         privs = [privs] unless privs.is_a?(Array)
         raise DSLError, "has_permission_on either needs a block or :to option" if !block_given? and privs.empty?
+        
+        columns = options[:on_columns]
 
         file, line = file_and_line_number_from_call_stack
         rule = AuthorizationRule.new(@current_role, privs, context, options[:join_by],
-                   :source_file => file, :source_line => line)
+                   :source_file => file, :source_line => line, :on_columns => columns)
         @auth_rules << rule
         if block_given?
           @current_rule = rule
@@ -338,6 +340,12 @@ module Authorization
       def to (*privs)
         raise DSLError, "to only allowed in has_permission_on blocks" if @current_rule.nil?
         @current_rule.append_privileges(privs.flatten)
+      end
+      
+      # Allows the programmer to define which columns the user has access to
+      def on_columns (*columns)
+        raise DSLError, "to only allowed in has_permission_on blocks" if @current_rule.nil?
+        @current_rule.append_columns(columns)
       end
 
       # In a has_permission_on block, if_attribute specifies conditions

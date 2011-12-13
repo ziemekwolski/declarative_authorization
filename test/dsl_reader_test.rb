@@ -128,6 +128,51 @@ class DSLReaderTest < Test::Unit::TestCase
     }
   end
   
+  def test_should_respond_to_on_columns
+    reader = Authorization::Reader::DSLReader.new
+    assert reader.auth_rules_reader.respond_to?(:on_columns), "AuthorizationRulesReader should be able to read 'on_columns' definition"
+  end
+  
+  def test_should_throw_expection_if_current_rule_is_not_set
+    reader = Authorization::Reader::DSLReader.new
+    assert_raise Authorization::Reader::DSLError do
+      reader.auth_rules_reader.on_columns([:name])
+    end
+  end
+  
+  def test_should_add_column_defintion_to_auth_rules
+    reader = Authorization::Reader::DSLReader.new
+    reader.parse %|
+      authorization do
+        role :test_role do
+          has_permission_on :perms, :to => :test, :on_columns => [:name]
+        end
+      end
+    |
+    assert_equal 1, reader.auth_rules_reader.roles.length
+    assert_equal 1, reader.auth_rules_reader.auth_rules.length
+    assert_equal [:name], reader.auth_rules_reader.auth_rules.first.accessible_columns
+    assert reader.auth_rules_reader.auth_rules[0].matches?(:test_role, [:test], :perms, [:name])
+  end
+  
+  def test_should_accept_column_definition_via_block
+    reader = Authorization::Reader::DSLReader.new
+    reader.parse %|
+      authorization do
+        role :test_role do
+          has_permission_on :perms do
+            to :test
+            on_columns :name
+          end
+        end
+      end
+    |
+    assert_equal 1, reader.auth_rules_reader.roles.length
+    assert_equal 1, reader.auth_rules_reader.auth_rules.length
+    assert_equal [:name], reader.auth_rules_reader.auth_rules.first.accessible_columns
+    assert reader.auth_rules_reader.auth_rules[0].matches?(:test_role, [:test], :perms, [:name]), "role does not match"
+  end
+  
   def test_dsl_error
     reader = Authorization::Reader::DSLReader.new
     assert_raise(Authorization::Reader::DSLError) do
